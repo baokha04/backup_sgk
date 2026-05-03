@@ -1,0 +1,12 @@
+.venv
+app/.venv
+__pycache__/
+*/__pycache__/
+.pytest_cache/
+
+# Project specific
+download/
+.env
+Dockerfile
+docker-compose.yml
+.dockerignore
