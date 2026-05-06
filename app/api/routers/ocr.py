@@ -6,6 +6,7 @@ from app.schemas.cloudflare import (
     OcrBatchResponse, SuccessResponse
 )
 from app.services.cloudflare_client import CloudflareClient, get_cloudflare_client
+from app.services.ocr_service import OCRService, get_ocr_service
 
 process_router = APIRouter(prefix="/ocr_processes", tags=["OCR Processes"])
 
@@ -28,6 +29,10 @@ async def delete_ocr_process(process_id: int, client: CloudflareClient = Depends
 @process_router.post("/process-batch", response_model=OcrBatchResponse)
 async def process_ocr_batch(client: CloudflareClient = Depends(get_cloudflare_client)):
     return await client.process_ocr_batch()
+
+@process_router.post("/process-book/{book_id}", response_model=OcrBatchResponse)
+async def process_book_ocr(book_id: int, service: OCRService = Depends(get_ocr_service)):
+    return await service.process_book_ocr(book_id)
 
 
 fail_router = APIRouter(prefix="/ocr_fails", tags=["OCR Fails"])

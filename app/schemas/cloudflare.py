@@ -96,3 +96,17 @@ class OcrBatchResponse(BaseModel):
 
 class SuccessResponse(BaseModel):
     success: bool
+
+class BookPageIdResponse(BaseModel):
+    id: int
+
+class BookPageOcrUpdate(BaseModel):
+    ocr_process_id: int
+
+class UploadS3Response(BaseModel):
+    total_files: int
+    uploaded: int
+    skipped: int
+    failed: int
+
+

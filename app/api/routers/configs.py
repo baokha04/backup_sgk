@@ -27,3 +27,5 @@ async def delete_config(config_id: int, client: CloudflareClient = Depends(get_c
     return await client.delete_config(config_id)
 
 
+
+

@@ -1,9 +1,11 @@
 import httpx
+import os
 from typing import List, Optional, Any, Dict
 from app.schemas.cloudflare import (
     Book, BookCreate, Config, ConfigCreate, BookPage, BookPageCreate,
     OcrProcess, OcrProcessCreate, OcrFail, OcrFailCreate,
-    CrawlRequest, CrawlResponse, OcrBatchResponse, SuccessResponse
+    CrawlRequest, CrawlResponse, OcrBatchResponse, SuccessResponse,
+    BookPageIdResponse, BookPageOcrUpdate
 )
 
 class CloudflareClient:
@@ -60,6 +62,8 @@ class CloudflareClient:
         data = await self._handle_response(response)
         return SuccessResponse(**data)
 
+
+
     # Book Pages
     async def get_book_pages(self, book_id: Optional[int] = None, from_page: Optional[int] = None, to_page: Optional[int] = None) -> List[BookPage]:
         params = {}
@@ -83,6 +87,18 @@ class CloudflareClient:
         response = await self.client.delete(f"/book_pages/{page_id}")
         data = await self._handle_response(response)
         return SuccessResponse(**data)
+
+    async def get_book_page_id(self, book_id: int, page_id: int) -> BookPageIdResponse:
+        params = {"book_id": book_id, "page_id": page_id}
+        response = await self.client.get("/book_pages/find-id", params=params)
+        data = await self._handle_response(response)
+        return BookPageIdResponse(**data)
+
+    async def update_book_page_ocr_process(self, page_id: int, ocr_process_id: int) -> BookPage:
+        update = BookPageOcrUpdate(ocr_process_id=ocr_process_id)
+        response = await self.client.patch(f"/book_pages/{page_id}/ocr-process", json=update.model_dump())
+        data = await self._handle_response(response)
+        return BookPage(**data)
 
     # OCR Processes
     async def get_ocr_processes(self) -> List[OcrProcess]:
@@ -109,6 +125,11 @@ class CloudflareClient:
         response = await self.client.post("/ocr_processes/process-batch")
         data = await self._handle_response(response)
         return OcrBatchResponse(**data)
+
+    async def upsert_ocr_process(self, process: OcrProcessCreate) -> OcrProcess:
+        response = await self.client.post("/ocr_processes/upsert", json=process.model_dump(exclude_unset=True))
+        data = await self._handle_response(response)
+        return OcrProcess(**data)
 
     # OCR Fails
     async def get_ocr_fails(self) -> List[OcrFail]:
