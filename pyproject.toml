@@ -3,7 +3,7 @@ name = "backup-sgk"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "aioboto3>=15.5.0",
     "aiofiles>=25.1.0",
@@ -13,4 +13,5 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "python-multipart>=0.0.27",
     "uvicorn>=0.46.0",
+    "Pillow>=10.0.0",
 ]

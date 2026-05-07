@@ -32,6 +32,8 @@ This project (`backup_sgk`) is a Python FastAPI proxy service acting as a backen
 - **`app/schemas/`**: 
   - `cloudflare.py`: Pydantic models mapping directly to the Cloudflare Worker OpenAPI schema (e.g., `Book`, `Config`, `OcrProcess`).
 - **`app/utils/`**:
+  - `openrouter_client.py`: Client for OpenRouter AI vision models.
+  - `mimo_client.py`: Client for Xiaomi MiMo AI vision models.
 
 
 ### Database
@@ -46,6 +48,7 @@ This project **does not** manage a direct database connection. All data persiste
 - **Dependency Injection**: FastAPI's `Depends` is used to inject the `CloudflareClient` instance into the route handlers.
 - **Environment Variables**: Managed via `python-dotenv` and the `.env` file. Ensure all sensitive data relies on `os.getenv`.
 - **Pydantic**: Use `BaseModel` for validation and schema definition. Responses should rigorously use `response_model` decorators.
+- **Image Processing**: Image-to-markdown OCR includes an automated resizing step (800x1124) using `Pillow` before processing.
 
 ---
 
@@ -59,13 +62,20 @@ graph TD
     %% Internal Proxy Architecture
     subgraph FastAPI Proxy Application
         FastAPI --> API_Routers[Routers: /books, /configs, /ocr, etc.]
-        API_Routers --> |Depends| CF_Client[CloudflareClient / HTTPX]
+        API_Routers --> |Depends| OCR_Service[OCR Service]
+        OCR_Service --> |Resizes 800x1124| ImageProc[Pillow Resizing]
+        ImageProc --> |Toggle| ProviderSelection{OCR Provider?}
+        ProviderSelection -->|openrouter| OR_Client[OpenRouterClient]
+        ProviderSelection -->|mimo| MiMo_Client[MimoClient]
         API_Routers -.-> |Validates| Schemas[Pydantic Schemas]
     end
     
     %% External Services
     subgraph External Infrastructure
-        CF_Client -->|Async HTTP| CF_Worker[Cloudflare Worker API]
-        CF_Worker -->|SQL| D1[(Cloudflare D1 Database)]
+        OR_Client -->|HTTP| OR_API[OpenRouter API]
+        MiMo_Client -->|HTTP| MiMo_API[Xiaomi MiMo API]
+        MiMo_API -.-> CF_Worker
+        OR_API -.-> CF_Worker
+        CF_Worker[Cloudflare Worker API] -->|SQL| D1[(Cloudflare D1 Database)]
     end
 ```

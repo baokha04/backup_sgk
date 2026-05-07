@@ -4,8 +4,13 @@ import logging
 import asyncio
 import httpx
 from typing import List, Optional
+import io
+from typing import List, Optional, Any
+from PIL import Image
 from app.services.cloudflare_client import CloudflareClient, get_cloudflare_client
 from app.utils.openrouter_client import OpenRouterClient, get_openrouter_client
+from app.utils.mimo_client import MimoClient, get_mimo_client
+from app.utils.ds2api_client import Ds2apiClient, get_ds2api_client
 from app.schemas.cloudflare import OcrProcessCreate, OcrFailCreate, BookPage, OcrBatchResponse
 
 logger = logging.getLogger(__name__)
@@ -14,20 +19,39 @@ class OCRService:
     def __init__(
         self, 
         cf_client: Optional[CloudflareClient] = None,
-        or_client: Optional[OpenRouterClient] = None,
+        vision_client: Optional[Any] = None,
         download_dir: str = "download"
     ):
         self.cf_client = cf_client or get_cloudflare_client()
-        self.or_client = or_client or get_openrouter_client()
+        self.vision_client = vision_client or self._get_default_vision_client()
         self.download_dir = download_dir
         self.lock = asyncio.Lock()
+
+    def _get_default_vision_client(self):
+        provider = os.getenv("OCR_PROVIDER", "mimo").lower()
+        if provider == "mimo":
+            return get_mimo_client()
+        if provider == "ds2api":
+            return get_ds2api_client()
+        return get_openrouter_client()
 
     def _get_image_path(self, book_id: int, page_number: int) -> str:
         return os.path.join(self.download_dir, f"book_{book_id}_page_{page_number}.jpg")
 
     def _encode_image(self, image_path: str) -> str:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
+        """Resize image to 1240x1754 and encode to base64."""
+        with Image.open(image_path) as img:
+            # Resize image
+            resized_img = img.resize((1240, 1754), Image.Resampling.LANCZOS)
+            
+            # Convert to RGB if necessary (e.g. for PNG/RGBA)
+            if resized_img.mode in ("RGBA", "P"):
+                resized_img = resized_img.convert("RGB")
+                
+            # Save to buffer
+            buffer = io.BytesIO()
+            resized_img.save(buffer, format="JPEG", quality=95)
+            return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
     async def process_page_ocr(self, page: BookPage) -> Optional[str]:
         """Process OCR for a single page."""
@@ -59,7 +83,7 @@ class OCRService:
                 
                 for attempt in range(max_retries):
                     try:
-                        markdown = await self.or_client.complete_with_image(image_base64, prompt)
+                        markdown = await self.vision_client.complete_with_image(image_base64, prompt)
                         break
                     except httpx.HTTPStatusError as e:
                         # Retry on rate limits (429) or transient server errors (5xx)
