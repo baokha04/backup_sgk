@@ -11,6 +11,7 @@ from app.services.cloudflare_client import CloudflareClient, get_cloudflare_clie
 from app.utils.openrouter_client import OpenRouterClient, get_openrouter_client
 from app.utils.mimo_client import MimoClient, get_mimo_client
 from app.utils.ds2api_client import Ds2apiClient, get_ds2api_client
+from app.utils.ai_hay_client import AiHayClient, get_ai_hay_client
 from app.schemas.cloudflare import OcrProcessCreate, OcrFailCreate, BookPage, OcrBatchResponse
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,8 @@ class OCRService:
             return get_mimo_client()
         if provider == "ds2api":
             return get_ds2api_client()
+        if provider == "ai_hay":
+            return get_ai_hay_client()
         return get_openrouter_client()
 
     def _get_image_path(self, book_id: int, page_number: int) -> str:

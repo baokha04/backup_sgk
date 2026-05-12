@@ -1,3 +1,9 @@
+import sys
+import asyncio
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +15,14 @@ from app.services.cloudflare_client import get_cloudflare_client
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    loop = asyncio.get_event_loop()
+    logger.info(f"DEBUG: Current Event Loop: {type(loop)}")
+    if sys.platform == 'win32' and 'Proactor' not in str(type(loop)):
+        logger.error("CRITICAL ERROR: SelectorEventLoop detected on Windows! Subprocesses will not work.")
+        logger.info("Attempting to force ProactorEventLoop policy...")
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     yield
     # Shutdown
     client = get_cloudflare_client()
@@ -51,3 +65,8 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
+
+def get_app():
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    return app

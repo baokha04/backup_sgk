@@ -11,7 +11,7 @@ from app.schemas.cloudflare import (
 class CloudflareClient:
     def __init__(self, base_url: str = "https://sgkviet.baokha1.workers.dev"):
         self.base_url = base_url
-        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
+        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=120.0)
 
     async def close(self):
         await self.client.aclose()

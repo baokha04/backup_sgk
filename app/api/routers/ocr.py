@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from typing import List
+from typing import List, Optional
 from app.schemas.cloudflare import (
     OcrProcess, OcrProcessCreate, 
     OcrFail, OcrFailCreate, 
@@ -33,6 +33,15 @@ async def process_ocr_batch(client: CloudflareClient = Depends(get_cloudflare_cl
 @process_router.post("/process-book/{book_id}", response_model=OcrBatchResponse)
 async def process_book_ocr(book_id: int, service: OCRService = Depends(get_ocr_service)):
     return await service.process_book_ocr(book_id)
+
+@process_router.post("/process-page/{page_id}", response_model=Optional[str])
+async def process_page_ocr(page_id: int, client: CloudflareClient = Depends(get_cloudflare_client), service: OCRService = Depends(get_ocr_service)):
+    # Fetch page info from Cloudflare
+    pages = await client.get_book_pages()
+    page = next((p for p in pages if p.id == page_id), None)
+    if not page:
+        return None
+    return await service.process_page_ocr(page)
 
 
 fail_router = APIRouter(prefix="/ocr_fails", tags=["OCR Fails"])
